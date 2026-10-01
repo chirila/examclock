@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Exam Clock</title>
+<style>
+  html, body {
+    margin: 0; height: 100%;
+    background: #000; color: #fff;
+    font-family: Helvetica, Arial, sans-serif;
+  }
+  #setup {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100%; gap: 1.2rem; font-size: 1.5rem;
+  }
+  #setup input, #setup button {
+    font-size: 1.5rem; padding: 0.4rem 0.8rem;
+    background: #111; color: #fff; border: 1px solid #666; border-radius: 6px;
+  }
+  #setup button { cursor: pointer; }
+  #display {
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    height: 100%; text-align: center; cursor: none;
+  }
+  .title  { font-size: 5vw; margin-bottom: 4vh; }
+  .label  { font-size: 4vw; color: #bbb; }
+  .value  { font-size: 14vw; font-weight: bold; line-height: 1.1; margin-bottom: 5vh; }
+  .label.small { font-size: 2.5vw; }
+  .value.small { font-size: 7vw; margin-bottom: 0; }
+  .hint  { position: fixed; bottom: 1vh; right: 1vw; font-size: 0.9rem; color: #333; }
+</style>
+</head>
+<body>
+
+<div id="setup">
+  <label>Exam title (optional): <input id="titleIn" type="text" placeholder="e.g. Midterm I"></label>
+  <label>End time: <input id="endIn" type="time" required></label>
+  <button id="startBtn">Start (full screen)</button>
+</div>
+
+<div id="display">
+  <div class="title" id="titleOut"></div>
+  <div class="label" id="remLabel">Time remaining</div>
+  <div class="value" id="remOut"></div>
+  <div class="label small">Current time</div>
+  <div class="value small" id="nowOut"></div>
+  <div class="hint">Press E to edit</div>
+</div>
+
+<script>
+  let endTime = null;
+  const $ = id => document.getElementById(id);
+
+  function fmtClock(d) {
+    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+
+  function fmtRemaining(mins) {
+    const h = Math.floor(mins / 60), m = mins % 60;
+    if (h === 0) return m + (m === 1 ? ' minute' : ' minutes');
+    return h + ' hr ' + m + ' min';
+  }
+
+  function tick() {
+    const now = new Date();
+    $('nowOut').textContent = fmtClock(now);
+    // Round remaining UP to the whole minute so it agrees with the displayed clock
+    // (e.g. 13:00 shown, end 14:00 -> 60 minutes, not 59).
+    const mins = Math.ceil((endTime - now) / 60000);
+    if (mins <= 0) {
+      $('remLabel').textContent = '';
+      $('remOut').textContent = 'Time is up';
+    } else {
+      $('remLabel').textContent = 'Time remaining';
+      $('remOut').textContent = fmtRemaining(mins);
+    }
+  }
+
+  function start() {
+    const v = $('endIn').value;
+    if (!v) { alert('Please set an end time.'); return; }
+    const [h, m] = v.split(':').map(Number);
+    endTime = new Date();
+    endTime.setHours(h, m, 0, 0);
+    $('titleOut').textContent = $('titleIn').value;
+    $('setup').style.display = 'none';
+    $('display').style.display = 'flex';
+    if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+    tick();
+  }
+
+  $('startBtn').addEventListener('click', start);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'e' || e.key === 'E') {
+      $('display').style.display = 'none';
+      $('setup').style.display = 'flex';
+      if (document.fullscreenElement) document.exitFullscreen();
+    }
+  });
+  setInterval(() => { if (endTime) tick(); }, 1000);
+</script>
+</body>
+</html>
